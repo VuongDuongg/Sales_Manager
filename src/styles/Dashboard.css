@@ -1,0 +1,142 @@
+/* ===== DASHBOARD STYLES ===== */
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-lg);
+  margin-bottom: var(--space-xl);
+}
+
+.stat-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  transition: var(--transition);
+  border-left: 4px solid transparent;
+  animation: slideUp 0.4s ease;
+}
+
+.stat-card:hover {
+  box-shadow: var(--shadow-md);
+  border-left-color: var(--primary);
+  transform: translateY(-4px);
+}
+
+.stat-card.sales {
+  border-left-color: #3b82f6;
+}
+
+.stat-card.products {
+  border-left-color: #8b5cf6;
+}
+
+.stat-card.customers {
+  border-left-color: #10b981;
+}
+
+.stat-icon {
+  font-size: 2.5rem;
+  flex-shrink: 0;
+  animation: bounce 2s infinite;
+}
+
+.stat-card.sales .stat-icon {
+  animation-delay: 0s;
+}
+
+.stat-card.products .stat-icon {
+  animation-delay: 0.2s;
+}
+
+.stat-card.customers .stat-icon {
+  animation-delay: 0.4s;
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-content h3 {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-sm) 0;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-sm) 0;
+}
+
+.stat-change {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.summary-section {
+  background: var(--bg-secondary);
+  padding: var(--space-xl);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  animation: fadeIn 0.5s ease;
+}
+
+.summary-section h3 {
+  margin: 0 0 var(--space-md) 0;
+  color: var(--text-primary);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.summary-section p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.8;
+}
+
+.summary-section strong {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+  }
+
+  .summary-section {
+    padding: var(--space-lg);
+  }
+}

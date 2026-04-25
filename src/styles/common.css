@@ -1,0 +1,234 @@
+/* ===== COMMON COMPONENTS ===== */
+
+/* Buttons */
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: var(--transition);
+}
+
+.add-btn {
+  background: var(--primary);
+  color: white;
+  padding: var(--space-sm) var(--space-lg);
+  animation: slideInRight 0.3s ease;
+}
+
+.add-btn:hover {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.submit-btn {
+  background: var(--primary);
+  color: white;
+  padding: var(--space-md) var(--space-xl);
+  margin-top: var(--space-md);
+  animation: fadeIn 0.3s ease;
+}
+
+.submit-btn:hover {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.edit-btn {
+  background: #f59e0b;
+  color: white;
+  padding: var(--space-sm) var(--space-md);
+  font-size: 0.9rem;
+  animation: fadeIn 0.3s ease;
+  border-radius: var(--radius-sm);
+}
+
+.edit-btn:hover {
+  background: #d97706;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.delete-btn {
+  background: #ef4444;
+  color: white;
+  padding: var(--space-sm) var(--space-md);
+  font-size: 0.9rem;
+  margin-left: var(--space-sm);
+  animation: fadeIn 0.3s ease;
+  border-radius: var(--radius-sm);
+}
+
+.delete-btn:hover {
+  background: #dc2626;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.cancel-btn {
+  background: var(--gray-400);
+  color: white;
+  padding: var(--space-md) var(--space-xl);
+  margin-left: var(--space-md);
+}
+
+.cancel-btn:hover {
+  background: var(--gray-500);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Forms */
+.add-form {
+  background: var(--bg-secondary);
+  padding: var(--space-xl);
+  border-radius: var(--radius-lg);
+  margin: var(--space-lg) 0;
+  border: 1px solid var(--border);
+  animation: slideDown 0.3s ease;
+}
+
+.add-form h3 {
+  margin: 0 0 var(--space-lg) 0;
+  color: var(--text-primary);
+  font-size: 1.2rem;
+}
+
+.form-group {
+  margin-bottom: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: 600;
+  margin-bottom: var(--space-sm);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: 0.95rem;
+  transition: var(--transition);
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.form-actions {
+  display: flex;
+  gap: var(--space-md);
+  align-items: center;
+  margin-top: var(--space-lg);
+}
+
+/* Search Input */
+.search-input {
+  padding: var(--space-sm) var(--space-md) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-md) !important;
+  font-size: 0.95rem !important;
+  width: 200px;
+  transition: var(--transition);
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px var(--primary-light) !important;
+  width: 250px;
+}
+
+/* Loading & Messages */
+.loading {
+  text-align: center;
+  padding: var(--space-2xl);
+  color: var(--text-secondary);
+  animation: fadeIn 0.3s ease;
+}
+
+.error {
+  background: #fee;
+  color: #c33;
+  padding: var(--space-lg);
+  border-radius: var(--radius-md);
+  margin: var(--space-lg) 0;
+  border-left: 4px solid #c33;
+  animation: slideInDown 0.3s ease;
+}
+
+.success {
+  background: #efe;
+  color: #3a3;
+  padding: var(--space-lg);
+  border-radius: var(--radius-md);
+  margin: var(--space-lg) 0;
+  border-left: 4px solid #3a3;
+  animation: slideInDown 0.3s ease;
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 1000px;
+  }
+}

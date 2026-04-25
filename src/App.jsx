@@ -1,11 +1,14 @@
 // Import các hook cần thiết từ React
 import { useState, useEffect } from 'react'
-// Import file CSS để styling
-import './App.css'
+// Import CSS files - modularized styles
+import './styles/variables.css'
+import './styles/common.css'
+import './styles/App.css'
 // Import các component riêng biệt
 import Dashboard from './components/Dashboard'
 import Products from './components/Products'
 import Sales from './components/Sales'
+import Charts from './components/Charts'
 
 // URL cơ sở của API backend (Node.js server chạy trên port 3001)
 const API_BASE_URL = 'http://localhost:3001/api'
@@ -36,6 +39,10 @@ function App() {
 
   // State cho chức năng tìm kiếm
   const [searchTerm, setSearchTerm] = useState('')
+
+  // State cho chế độ edit
+  const [editingId, setEditingId] = useState(null)
+  const [editingType, setEditingType] = useState(null) // 'product' hoặc 'sale'
 
   // ===== FORM STATES =====
   // State cho form thêm sản phẩm mới
@@ -120,9 +127,92 @@ function App() {
   }, [activeSection])
 
   // ===== EVENT HANDLERS =====
+  // Hàm xử lý cập nhật sản phẩm
+  const updateProduct = async (e) => {
+    e.preventDefault()
+    try {
+      const response = await fetch(`${API_BASE_URL}/products/${editingId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newProduct)
+      })
+      if (!response.ok) throw new Error('Failed to update product')
+
+      setNewProduct({ name: '', price: '', description: '' })
+      setEditingId(null)
+      setEditingType(null)
+      setShowAddForm(false)
+
+      fetchProducts()
+      fetchDashboardData()
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  // Hàm xử lý xóa sản phẩm
+  const deleteProduct = async (id) => {
+    if (!confirm('Are you sure you want to delete this product?')) return
+    try {
+      const response = await fetch(`${API_BASE_URL}/products/${id}`, {
+        method: 'DELETE'
+      })
+      if (!response.ok) throw new Error('Failed to delete product')
+
+      fetchProducts()
+      fetchDashboardData()
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  // Hàm xử lý cập nhật giao dịch
+  const updateSale = async (e) => {
+    e.preventDefault()
+    try {
+      const response = await fetch(`${API_BASE_URL}/sales/${editingId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newSale)
+      })
+      if (!response.ok) throw new Error('Failed to update sale')
+
+      setNewSale({ product_id: '', quantity: '', customer_name: '' })
+      setEditingId(null)
+      setEditingType(null)
+      setShowAddForm(false)
+
+      fetchSales()
+      fetchDashboardData()
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  // Hàm xử lý xóa giao dịch
+  const deleteSale = async (id) => {
+    if (!confirm('Are you sure you want to delete this sale?')) return
+    try {
+      const response = await fetch(`${API_BASE_URL}/sales/${id}`, {
+        method: 'DELETE'
+      })
+      if (!response.ok) throw new Error('Failed to delete sale')
+
+      fetchSales()
+      fetchDashboardData()
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
   // Hàm xử lý thêm sản phẩm mới
   const addProduct = async (e) => {
     e.preventDefault() // Ngăn form submit mặc định
+    if (editingId) {
+      updateProduct(e)
+      return
+    }
+
     try {
       // Gọi API POST để tạo sản phẩm mới
       const response = await fetch(`${API_BASE_URL}/products`, {
@@ -147,6 +237,11 @@ function App() {
   // Hàm xử lý thêm giao dịch bán hàng mới
   const addSale = async (e) => {
     e.preventDefault()
+    if (editingId) {
+      updateSale(e)
+      return
+    }
+
     try {
       const response = await fetch(`${API_BASE_URL}/sales`, {
         method: 'POST',
@@ -165,6 +260,31 @@ function App() {
     } catch (err) {
       setError(err.message)
     }
+  }
+
+  // Hàm để bắt đầu chỉnh sửa sản phẩm
+  const startEditProduct = (product) => {
+    setEditingId(product.id)
+    setEditingType('product')
+    setNewProduct({ name: product.name, price: product.price, description: product.description })
+    setShowAddForm(true)
+  }
+
+  // Hàm để bắt đầu chỉnh sửa giao dịch
+  const startEditSale = (sale) => {
+    setEditingId(sale.id)
+    setEditingType('sale')
+    setNewSale({ product_id: sale.product_id, quantity: sale.quantity, customer_name: sale.customer_name })
+    setShowAddForm(true)
+  }
+
+  // Hàm để hủy chỉnh sửa
+  const cancelEdit = () => {
+    setEditingId(null)
+    setEditingType(null)
+    setNewProduct({ name: '', price: '', description: '' })
+    setNewSale({ product_id: '', quantity: '', customer_name: '' })
+    setShowAddForm(false)
   }
 
   // ===== FILTER FUNCTIONS =====
@@ -231,6 +351,11 @@ function App() {
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
             filteredProducts={filteredProducts}
+            deleteProduct={deleteProduct}
+            startEditProduct={startEditProduct}
+            editingId={editingId}
+            editingType={editingType}
+            cancelEdit={cancelEdit}
           />
         )
       case 'sales':
@@ -246,8 +371,16 @@ function App() {
             setSearchTerm={setSearchTerm}
             filteredSales={filteredSales}
             products={products}
+            deleteSale={deleteSale}
+            startEditSale={startEditSale}
+            editingId={editingId}
+            editingType={editingType}
+            cancelEdit={cancelEdit}
           />
         )
+      case 'charts':
+        // Sử dụng component Charts để hiển thị thống kê
+        return <Charts sales={sales} products={products} />
       default:
         // Màn hình chào mừng mặc định khi chưa chọn section nào
         return (
@@ -306,6 +439,15 @@ function App() {
                 onClick={() => setActiveSection('sales')}
               >
                 🛒 Sales
+              </button>
+            </li>
+            {/* Nút chuyển đến Charts */}
+            <li>
+              <button
+                className={activeSection === 'charts' ? 'active' : ''}
+                onClick={() => setActiveSection('charts')}
+              >
+                📈 Analytics
               </button>
             </li>
           </ul>

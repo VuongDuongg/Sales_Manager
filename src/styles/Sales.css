@@ -1,0 +1,179 @@
+/* ===== SALES STYLES ===== */
+
+.filters-section {
+  display: flex;
+  gap: var(--space-md);
+  margin: var(--space-lg) 0;
+  padding: var(--space-lg);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  align-items: flex-end;
+  flex-wrap: wrap;
+  animation: slideInDown 0.3s ease;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+.filter-group label {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.filter-group select {
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: var(--transition);
+  min-width: 150px;
+}
+
+.filter-group select:hover {
+  border-color: var(--primary);
+}
+
+.filter-group select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.filter-info {
+  margin-left: auto;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.table-container {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  animation: fadeIn 0.3s ease;
+}
+
+.sales-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-primary);
+}
+
+.sales-table thead {
+  background: var(--bg-secondary);
+  border-bottom: 2px solid var(--border);
+}
+
+.sales-table th {
+  padding: var(--space-md);
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sales-table td {
+  padding: var(--space-md);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.sales-table tbody tr {
+  transition: var(--transition);
+  animation: fadeIn 0.3s ease;
+}
+
+.sales-table tbody tr:hover {
+  background: var(--bg-secondary);
+  transform: scale(1.01);
+}
+
+.sales-table .amount {
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.actions-cell {
+  display: flex;
+  gap: var(--space-sm);
+  min-width: 100px;
+}
+
+.actions-cell button {
+  flex: 1;
+  padding: var(--space-sm) !important;
+  font-size: 0.9rem !important;
+  margin: 0 !important;
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: var(--space-2xl) !important;
+  font-style: italic;
+}
+
+@media (max-width: 768px) {
+  .filters-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-group {
+    width: 100%;
+  }
+
+  .filter-group select {
+    min-width: auto;
+    width: 100%;
+  }
+
+  .filter-info {
+    margin-left: 0;
+    text-align: center;
+  }
+
+  .table-container {
+    border: none;
+    border-radius: 0;
+  }
+
+  .sales-table {
+    font-size: 0.85rem;
+  }
+
+  .sales-table th,
+  .sales-table td {
+    padding: var(--space-sm);
+  }
+
+  .content-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .search-input {
+    width: 100% !important;
+  }
+
+  .add-btn {
+    width: 100%;
+  }
+
+  .actions-cell {
+    min-width: 60px;
+  }
+}

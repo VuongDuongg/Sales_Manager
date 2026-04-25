@@ -49,31 +49,94 @@ function createTables() {
   insertSampleData();
 }
 
+// Product templates
+const productTemplates = [
+  { name: 'Laptop Dell XPS 13', price: 1299, description: 'Ultra-portable laptop with powerful performance' },
+  { name: 'Laptop HP Pavilion', price: 799, description: 'Reliable laptop for everyday computing' },
+  { name: 'Laptop Lenovo ThinkPad', price: 1100, description: 'Business-grade laptop with long battery life' },
+  { name: 'Monitor LG 27"', price: 350, description: '4K UHD display for professional work' },
+  { name: 'Monitor Dell 24"', price: 250, description: 'Full HD monitor perfect for office' },
+  { name: 'Mouse Logitech MX Master', price: 99, description: 'Advanced wireless mouse for productivity' },
+  { name: 'Mouse Razer DeathAdder', price: 70, description: 'Gaming mouse with precision tracking' },
+  { name: 'Mouse Microsoft Pro', price: 45, description: 'Ergonomic wireless mouse' },
+  { name: 'Keyboard Mechanical Cherry', price: 150, description: 'Premium mechanical keyboard with RGB' },
+  { name: 'Keyboard Logitech K840', price: 120, description: 'Mechanical gaming keyboard' },
+  { name: 'Keyboard Apple Magic', price: 299, description: 'Wireless keyboard for Mac' },
+  { name: 'Webcam Logitech C920', price: 85, description: '1080p HD webcam for video calls' },
+  { name: 'Webcam Razer Kiyo', price: 100, description: 'Streaming webcam with auto focus' },
+  { name: 'Headphones Sony WH-1000', price: 350, description: 'Noise-cancelling wireless headphones' },
+  { name: 'Headphones Apple AirPods Pro', price: 249, description: 'Premium wireless earbuds' },
+  { name: 'Headphones Logitech G Pro', price: 129, description: 'Gaming headset with surround sound' },
+  { name: 'SSD Samsung 970 Evo', price: 120, description: '500GB NVMe SSD for speed' },
+  { name: 'SSD WD Blue 1TB', price: 150, description: '1TB solid state drive' },
+  { name: 'Graphics Card RTX 3060', price: 400, description: 'NVIDIA graphics card for gaming' },
+  { name: 'RAM DDR4 16GB', price: 80, description: 'High-speed memory for multitasking' },
+  { name: 'Power Supply 750W', price: 100, description: 'Gold-rated power supply' },
+  { name: 'CPU Cooler Noctua', price: 90, description: 'Quiet and efficient CPU cooler' },
+  { name: 'USB-C Hub Anker', price: 40, description: '7-in-1 USB-C hub with multiple ports' },
+  { name: 'Docking Station Lenovo', price: 180, description: 'Universal docking station for laptops' },
+  { name: 'Monitor Arm Ergotron', price: 180, description: 'VESA mount monitor arm for desks' }
+];
+
+// Customer names
+const customerNames = [
+  'John Doe', 'Jane Smith', 'Michael Johnson', 'Emily Brown', 'David Wilson',
+  'Sarah Davis', 'Robert Miller', 'Lisa Anderson', 'James Taylor', 'Jennifer Garcia',
+  'William Martinez', 'Mary Robinson', 'Charles Rodriguez', 'Patricia Lee', 'Christopher Lee',
+  'Barbara Harris', 'Daniel White', 'Nancy Martin', 'Mark Thompson', 'Katherine Moore'
+];
+
 function insertSampleData() {
   // Check if data already exists
   db.get("SELECT COUNT(*) as count FROM products", (err, row) => {
     if (err || !row || row.count === 0) {
-      const products = [
-        { name: 'Laptop Dell', price: 1500, description: 'High-performance laptop' },
-        { name: 'Mouse Logitech', price: 50, description: 'Wireless mouse' },
-        { name: 'Keyboard Mechanical', price: 120, description: 'RGB mechanical keyboard' }
-      ];
-
-      products.forEach(product => {
+      console.log('Generating sample data...');
+      
+      // Insert products
+      productTemplates.forEach(product => {
         db.run(`INSERT INTO products (name, price, description) VALUES (?, ?, ?)`,
           [product.name, product.price, product.description]);
       });
 
-      // Sample sales
-      const sales = [
-        { product_id: 1, quantity: 2, total_amount: 3000, customer_name: 'John Doe' },
-        { product_id: 2, quantity: 5, total_amount: 250, customer_name: 'Jane Smith' }
-      ];
+      // Generate sales data with varying dates over past 30 days
+      setTimeout(() => {
+        db.all("SELECT id FROM products", (err, products) => {
+          if (err || !products || products.length === 0) {
+            console.log('No products found, skipping sales generation');
+            return;
+          }
 
-      sales.forEach(sale => {
-        db.run(`INSERT INTO sales (product_id, quantity, total_amount, customer_name) VALUES (?, ?, ?, ?)`,
-          [sale.product_id, sale.quantity, sale.total_amount, sale.customer_name]);
-      });
+          // Generate 100+ random sales records
+          for (let i = 0; i < 150; i++) {
+            const randomProduct = products[Math.floor(Math.random() * products.length)];
+            const randomCustomer = customerNames[Math.floor(Math.random() * customerNames.length)];
+            const quantity = Math.floor(Math.random() * 10) + 1;
+            
+            // Get product price for accurate total
+            db.get("SELECT price FROM products WHERE id = ?", [randomProduct.id], (err, product) => {
+              if (product) {
+                const totalAmount = product.price * quantity;
+                
+                // Random date within last 30 days
+                const daysAgo = Math.floor(Math.random() * 30);
+                const hoursAgo = Math.floor(Math.random() * 24);
+                const date = new Date();
+                date.setDate(date.getDate() - daysAgo);
+                date.setHours(date.getHours() - hoursAgo);
+                const saleDate = date.toISOString();
+                
+                db.run(
+                  `INSERT INTO sales (product_id, quantity, total_amount, customer_name, sale_date) 
+                   VALUES (?, ?, ?, ?, ?)`,
+                  [randomProduct.id, quantity, totalAmount, randomCustomer, saleDate]
+                );
+              }
+            });
+          }
+
+          console.log('Sample data generated successfully!');
+        });
+      }, 500);
     }
   });
 }
@@ -147,6 +210,80 @@ app.post('/api/sales', (req, res) => {
           customer_name
         });
       });
+  });
+});
+
+// Update product
+app.put('/api/products/:id', (req, res) => {
+  const { id } = req.params;
+  const { name, price, description } = req.body;
+  db.run(
+    `UPDATE products SET name = ?, price = ?, description = ? WHERE id = ?`,
+    [name, price, description, id],
+    function(err) {
+      if (err) {
+        res.status(500).json({ error: err.message });
+        return;
+      }
+      res.json({ id: parseInt(id), name, price, description });
+    }
+  );
+});
+
+// Delete product
+app.delete('/api/products/:id', (req, res) => {
+  const { id } = req.params;
+  db.run(`DELETE FROM products WHERE id = ?`, [id], function(err) {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    res.json({ success: true, id: parseInt(id) });
+  });
+});
+
+// Update sale
+app.put('/api/sales/:id', (req, res) => {
+  const { id } = req.params;
+  const { product_id, quantity, customer_name } = req.body;
+
+  // Get product price
+  db.get("SELECT price FROM products WHERE id = ?", [product_id], (err, product) => {
+    if (err || !product) {
+      res.status(500).json({ error: 'Product not found' });
+      return;
+    }
+
+    const total_amount = product.price * quantity;
+    db.run(
+      `UPDATE sales SET product_id = ?, quantity = ?, total_amount = ?, customer_name = ? WHERE id = ?`,
+      [product_id, quantity, total_amount, customer_name, id],
+      function(err) {
+        if (err) {
+          res.status(500).json({ error: err.message });
+          return;
+        }
+        res.json({
+          id: parseInt(id),
+          product_id,
+          quantity,
+          total_amount,
+          customer_name
+        });
+      }
+    );
+  });
+});
+
+// Delete sale
+app.delete('/api/sales/:id', (req, res) => {
+  const { id } = req.params;
+  db.run(`DELETE FROM sales WHERE id = ?`, [id], function(err) {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    res.json({ success: true, id: parseInt(id) });
   });
 });
 
