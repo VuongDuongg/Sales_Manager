@@ -1,20 +1,124 @@
 // ===== COMPONENT CATEGORIES =====
 // Component quản lý danh sách categories
 import '../styles/Categories.css'
+import { useState } from 'react'
+import { useAuth } from '../contexts/AuthContext'
 
-const Categories = ({
-  categories,
-  showAddForm,
-  setShowAddForm,
-  newCategory,
-  setNewCategory,
-  addCategory,
-  deleteCategory,
-  startEditCategory,
-  editingId,
-  editingType,
-  cancelEdit
-}) => {
+const Categories = ({ categories, onCategoriesUpdate, socket }) => {
+  const { token } = useAuth()
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newCategory, setNewCategory] = useState({
+    name: '',
+    description: ''
+  })
+  const [editingId, setEditingId] = useState(null)
+  const [editingType, setEditingType] = useState(null)
+
+  // API base URL
+  const API_BASE_URL = 'http://localhost:3001/api'
+
+  // Helper function for authenticated API calls
+  const authenticatedFetch = async (url, options = {}) => {
+    const headers = {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+
+    return fetch(url, {
+      ...options,
+      headers
+    })
+  }
+
+  // Add or update category
+  const addCategory = async (e) => {
+    e.preventDefault()
+
+    if (!newCategory.name) {
+      alert('Please enter a category name')
+      return
+    }
+
+    try {
+      const url = editingId
+        ? `${API_BASE_URL}/categories/${editingId}`
+        : `${API_BASE_URL}/categories`
+
+      const method = editingId ? 'PUT' : 'POST'
+
+      const response = await authenticatedFetch(url, {
+        method,
+        body: JSON.stringify({
+          name: newCategory.name,
+          description: newCategory.description
+        })
+      })
+
+      if (response.ok) {
+        setNewCategory({
+          name: '',
+          description: ''
+        })
+        setShowAddForm(false)
+        setEditingId(null)
+        setEditingType(null)
+        onCategoriesUpdate() // Refresh categories list
+      } else {
+        const error = await response.json()
+        alert(`Error: ${error.error || 'Failed to save category'}`)
+      }
+    } catch (error) {
+      console.error('Error saving category:', error)
+      alert('Failed to save category')
+    }
+  }
+
+  // Delete category
+  const deleteCategory = async (id) => {
+    if (!confirm('Are you sure you want to delete this category? This may affect products using this category.')) return
+
+    try {
+      const response = await authenticatedFetch(`${API_BASE_URL}/categories/${id}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        onCategoriesUpdate() // Refresh categories list
+      } else {
+        const error = await response.json()
+        alert(`Error: ${error.error || 'Failed to delete category'}`)
+      }
+    } catch (error) {
+      console.error('Error deleting category:', error)
+      alert('Failed to delete category')
+    }
+  }
+
+  // Start editing category
+  const startEditCategory = (category) => {
+    setNewCategory({
+      name: category.name,
+      description: category.description || ''
+    })
+    setEditingId(category.id)
+    setEditingType('category')
+    setShowAddForm(true)
+  }
+
+  // Cancel editing
+  const cancelEdit = () => {
+    setNewCategory({
+      name: '',
+      description: ''
+    })
+    setEditingId(null)
+    setEditingType(null)
+    setShowAddForm(false)
+  }
   return (
     <div className="content">
       {/* Header với tiêu đề và nút thêm */}

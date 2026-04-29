@@ -1,26 +1,144 @@
 // ===== COMPONENT PRODUCTS =====
 // Component quản lý danh sách sản phẩm và form thêm sản phẩm
 import '../styles/Products.css'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useAuth } from '../contexts/AuthContext'
 
-const Products = ({
-  showAddForm,
-  setShowAddForm,
-  newProduct,
-  setNewProduct,
-  addProduct,
-  searchTerm,
-  setSearchTerm,
-  filteredProducts,
-  deleteProduct,
-  startEditProduct,
-  editingId,
-  editingType,
-  cancelEdit,
-  categories
-}) => {
+const Products = ({ products, categories, onProductsUpdate, socket }) => {
+  const { token } = useAuth()
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newProduct, setNewProduct] = useState({
+    name: '',
+    price: '',
+    description: '',
+    category_id: ''
+  })
+  const [editingId, setEditingId] = useState(null)
+  const [editingType, setEditingType] = useState(null)
+  const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState('name')
   const [filterPrice, setFilterPrice] = useState('all')
+
+  // API base URL
+  const API_BASE_URL = 'http://localhost:3001/api'
+
+  // Helper function for authenticated API calls
+  const authenticatedFetch = async (url, options = {}) => {
+    const headers = {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+
+    return fetch(url, {
+      ...options,
+      headers
+    })
+  }
+
+  // Add or update product
+  const addProduct = async (e) => {
+    e.preventDefault()
+
+    if (!newProduct.name || !newProduct.price) {
+      alert('Please fill in all required fields')
+      return
+    }
+
+    try {
+      const url = editingId
+        ? `${API_BASE_URL}/products/${editingId}`
+        : `${API_BASE_URL}/products`
+
+      const method = editingId ? 'PUT' : 'POST'
+
+      const response = await authenticatedFetch(url, {
+        method,
+        body: JSON.stringify({
+          name: newProduct.name,
+          price: parseFloat(newProduct.price),
+          description: newProduct.description,
+          category_id: newProduct.category_id ? parseInt(newProduct.category_id) : null
+        })
+      })
+
+      if (response.ok) {
+        setNewProduct({
+          name: '',
+          price: '',
+          description: '',
+          category_id: ''
+        })
+        setShowAddForm(false)
+        setEditingId(null)
+        setEditingType(null)
+        onProductsUpdate() // Refresh products list
+      } else {
+        const error = await response.json()
+        alert(`Error: ${error.error || 'Failed to save product'}`)
+      }
+    } catch (error) {
+      console.error('Error saving product:', error)
+      alert('Failed to save product')
+    }
+  }
+
+  // Delete product
+  const deleteProduct = async (id) => {
+    if (!confirm('Are you sure you want to delete this product?')) return
+
+    try {
+      const response = await authenticatedFetch(`${API_BASE_URL}/products/${id}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        onProductsUpdate() // Refresh products list
+      } else {
+        const error = await response.json()
+        alert(`Error: ${error.error || 'Failed to delete product'}`)
+      }
+    } catch (error) {
+      console.error('Error deleting product:', error)
+      alert('Failed to delete product')
+    }
+  }
+
+  // Start editing product
+  const startEditProduct = (product) => {
+    setNewProduct({
+      name: product.name,
+      price: product.price.toString(),
+      description: product.description || '',
+      category_id: product.category_id?.toString() || ''
+    })
+    setEditingId(product.id)
+    setEditingType('product')
+    setShowAddForm(true)
+  }
+
+  // Cancel editing
+  const cancelEdit = () => {
+    setNewProduct({
+      name: '',
+      price: '',
+      description: '',
+      category_id: ''
+    })
+    setEditingId(null)
+    setEditingType(null)
+    setShowAddForm(false)
+  }
+
+  // Filter products based on search term
+  const filteredProducts = products.filter(product =>
+    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    categories.find(cat => cat.id === product.category_id)?.name.toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
   // Sắp xếp sản phẩm
   const sortedProducts = [...filteredProducts].sort((a, b) => {

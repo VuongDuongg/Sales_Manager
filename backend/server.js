@@ -4,6 +4,8 @@ import cors from 'cors';
 import bodyParser from 'body-parser';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 
 const app = express();
 const server = createServer(app);
@@ -15,6 +17,7 @@ const io = new Server(server, {
 });
 
 const PORT = 3001;
+const JWT_SECRET = 'your-secret-key-change-in-production'; // In production, use environment variable
 
 // Middleware
 app.use(cors({
@@ -24,6 +27,24 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(bodyParser.json());
+
+// JWT middleware
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+  if (!token) {
+    return res.status(401).json({ error: 'Access token required' });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ error: 'Invalid or expired token' });
+    }
+    req.user = user;
+    next();
+  });
+};
 
 // Socket.io connection
 io.on('connection', (socket) => {
@@ -46,6 +67,15 @@ const db = new sqlite3.Database('./sales_manager.db', (err) => {
 
 // Create tables
 function createTables() {
+  db.run(`CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE,
+    password TEXT NOT NULL,
+    role TEXT DEFAULT 'user',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+
   db.run(`CREATE TABLE IF NOT EXISTS categories (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
@@ -115,6 +145,22 @@ const customerNames = [
 ];
 
 function insertSampleData() {
+  // Create default admin user
+  db.get("SELECT id FROM users WHERE email = ?", ['admin@salesmanager.com'], async (err, existingUser) => {
+    if (!existingUser) {
+      try {
+        const hashedPassword = await bcrypt.hash('admin123', 10);
+        db.run(
+          `INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)`,
+          ['Admin User', 'admin@salesmanager.com', hashedPassword, 'admin']
+        );
+        console.log('Default admin user created: admin@salesmanager.com / admin123');
+      } catch (error) {
+        console.error('Error creating default admin user:', error);
+      }
+    }
+  });
+
   // Check if data already exists
   db.get("SELECT COUNT(*) as count FROM products", (err, row) => {
     if (err || !row || row.count === 0) {
@@ -184,6 +230,105 @@ function insertSampleData() {
 
 // API Routes
 
+// ===== AUTHENTICATION ROUTES =====
+
+// Register new user
+app.post('/api/auth/register', async (req, res) => {
+  const { name, email, password } = req.body;
+
+  if (!name || !email || !password) {
+    return res.status(400).json({ error: 'Name, email, and password are required' });
+  }
+
+  try {
+    // Check if user already exists
+    db.get("SELECT id FROM users WHERE email = ?", [email], async (err, existingUser) => {
+      if (err) {
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      if (existingUser) {
+        return res.status(400).json({ error: 'User already exists' });
+      }
+
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Insert new user
+      db.run(
+        `INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)`,
+        [name, email, hashedPassword, 'admin'], // Default role is admin for now
+        function(err) {
+          if (err) {
+            return res.status(500).json({ error: 'Failed to create user' });
+          }
+
+          const token = jwt.sign(
+            { id: this.lastID, email, name, role: 'admin' },
+            JWT_SECRET,
+            { expiresIn: '24h' }
+          );
+
+          res.json({
+            token,
+            user: { id: this.lastID, name, email, role: 'admin' }
+          });
+        }
+      );
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Login user
+app.post('/api/auth/login', (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required' });
+  }
+
+  db.get("SELECT * FROM users WHERE email = ?", [email], async (err, user) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    try {
+      const isValidPassword = await bcrypt.compare(password, user.password);
+      if (!isValidPassword) {
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+
+      const token = jwt.sign(
+        { id: user.id, email: user.email, name: user.name, role: user.role },
+        JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+
+      res.json({
+        token,
+        user: { id: user.id, name: user.name, email: user.email, role: user.role }
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Server error' });
+    }
+  });
+});
+
+// Verify token
+app.get('/api/auth/verify', authenticateToken, (req, res) => {
+  res.json({ user: req.user });
+});
+
+// ===== DATA ROUTES =====
+
+// ===== DATA ROUTES =====
+
 // Get all categories
 app.get('/api/categories', (req, res) => {
   db.all("SELECT * FROM categories ORDER BY name", (err, rows) => {
@@ -196,7 +341,7 @@ app.get('/api/categories', (req, res) => {
 });
 
 // Add new category
-app.post('/api/categories', (req, res) => {
+app.post('/api/categories', authenticateToken, (req, res) => {
   const { name, description } = req.body;
   db.run(`INSERT INTO categories (name, description) VALUES (?, ?)`,
     [name, description], function(err) {
@@ -211,7 +356,7 @@ app.post('/api/categories', (req, res) => {
 });
 
 // Update category
-app.put('/api/categories/:id', (req, res) => {
+app.put('/api/categories/:id', authenticateToken, (req, res) => {
   const { id } = req.params;
   const { name, description } = req.body;
   db.run(
@@ -230,7 +375,7 @@ app.put('/api/categories/:id', (req, res) => {
 });
 
 // Delete category
-app.delete('/api/categories/:id', (req, res) => {
+app.delete('/api/categories/:id', authenticateToken, (req, res) => {
   const { id } = req.params;
   db.run(`DELETE FROM categories WHERE id = ?`, [id], function(err) {
     if (err) {
@@ -260,7 +405,7 @@ app.get('/api/products', (req, res) => {
 });
 
 // Add new product
-app.post('/api/products', (req, res) => {
+app.post('/api/products', authenticateToken, (req, res) => {
   const { name, price, description, category_id } = req.body;
   db.run(`INSERT INTO products (name, price, description, category_id) VALUES (?, ?, ?, ?)`,
     [name, price, description, category_id], function(err) {
@@ -292,7 +437,7 @@ app.get('/api/sales', (req, res) => {
 });
 
 // Add new sale
-app.post('/api/sales', (req, res) => {
+app.post('/api/sales', authenticateToken, (req, res) => {
   const { product_id, quantity, customer_name } = req.body;
 
   // Get product price
@@ -323,7 +468,7 @@ app.post('/api/sales', (req, res) => {
 });
 
 // Update product
-app.put('/api/products/:id', (req, res) => {
+app.put('/api/products/:id', authenticateToken, (req, res) => {
   const { id } = req.params;
   const { name, price, description, category_id } = req.body;
   db.run(
@@ -342,7 +487,7 @@ app.put('/api/products/:id', (req, res) => {
 });
 
 // Delete product
-app.delete('/api/products/:id', (req, res) => {
+app.delete('/api/products/:id', authenticateToken, (req, res) => {
   const { id } = req.params;
   db.run(`DELETE FROM products WHERE id = ?`, [id], function(err) {
     if (err) {
@@ -355,7 +500,7 @@ app.delete('/api/products/:id', (req, res) => {
 });
 
 // Update sale
-app.put('/api/sales/:id', (req, res) => {
+app.put('/api/sales/:id', authenticateToken, (req, res) => {
   const { id } = req.params;
   const { product_id, quantity, customer_name } = req.body;
 
@@ -390,7 +535,7 @@ app.put('/api/sales/:id', (req, res) => {
 });
 
 // Delete sale
-app.delete('/api/sales/:id', (req, res) => {
+app.delete('/api/sales/:id', authenticateToken, (req, res) => {
   const { id } = req.params;
   db.run(`DELETE FROM sales WHERE id = ?`, [id], function(err) {
     if (err) {
@@ -403,7 +548,7 @@ app.delete('/api/sales/:id', (req, res) => {
 });
 
 // Get dashboard stats
-app.get('/api/dashboard', (req, res) => {
+app.get('/api/dashboard', authenticateToken, (req, res) => {
   const queries = {
     totalSales: "SELECT SUM(total_amount) as total FROM sales",
     totalProducts: "SELECT COUNT(*) as count FROM products",

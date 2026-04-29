@@ -1,26 +1,138 @@
 // ===== COMPONENT SALES =====
 // Component quản lý danh sách giao dịch bán hàng và form thêm sale
 import '../styles/Sales.css'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useAuth } from '../contexts/AuthContext'
 
-const Sales = ({
-  showAddForm,
-  setShowAddForm,
-  newSale,
-  setNewSale,
-  addSale,
-  searchTerm,
-  setSearchTerm,
-  filteredSales,
-  products,
-  deleteSale,
-  startEditSale,
-  editingId,
-  editingType,
-  cancelEdit
-}) => {
+const Sales = ({ sales, products, onSalesUpdate, socket }) => {
+  const { token } = useAuth()
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newSale, setNewSale] = useState({
+    product_id: '',
+    quantity: '',
+    customer_name: ''
+  })
+  const [editingId, setEditingId] = useState(null)
+  const [editingType, setEditingType] = useState(null)
+  const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState('newest')
   const [filterAmount, setFilterAmount] = useState('all')
+
+  // API base URL
+  const API_BASE_URL = 'http://localhost:3001/api'
+
+  // Helper function for authenticated API calls
+  const authenticatedFetch = async (url, options = {}) => {
+    const headers = {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+
+    return fetch(url, {
+      ...options,
+      headers
+    })
+  }
+
+  // Add or update sale
+  const addSale = async (e) => {
+    e.preventDefault()
+
+    if (!newSale.product_id || !newSale.quantity || !newSale.customer_name) {
+      alert('Please fill in all required fields')
+      return
+    }
+
+    try {
+      const url = editingId
+        ? `${API_BASE_URL}/sales/${editingId}`
+        : `${API_BASE_URL}/sales`
+
+      const method = editingId ? 'PUT' : 'POST'
+
+      const response = await authenticatedFetch(url, {
+        method,
+        body: JSON.stringify({
+          product_id: parseInt(newSale.product_id),
+          quantity: parseInt(newSale.quantity),
+          customer_name: newSale.customer_name
+        })
+      })
+
+      if (response.ok) {
+        setNewSale({
+          product_id: '',
+          quantity: '',
+          customer_name: ''
+        })
+        setShowAddForm(false)
+        setEditingId(null)
+        setEditingType(null)
+        onSalesUpdate() // Refresh sales list
+      } else {
+        const error = await response.json()
+        alert(`Error: ${error.error || 'Failed to save sale'}`)
+      }
+    } catch (error) {
+      console.error('Error saving sale:', error)
+      alert('Failed to save sale')
+    }
+  }
+
+  // Delete sale
+  const deleteSale = async (id) => {
+    if (!confirm('Are you sure you want to delete this sale?')) return
+
+    try {
+      const response = await authenticatedFetch(`${API_BASE_URL}/sales/${id}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        onSalesUpdate() // Refresh sales list
+      } else {
+        const error = await response.json()
+        alert(`Error: ${error.error || 'Failed to delete sale'}`)
+      }
+    } catch (error) {
+      console.error('Error deleting sale:', error)
+      alert('Failed to delete sale')
+    }
+  }
+
+  // Start editing sale
+  const startEditSale = (sale) => {
+    setNewSale({
+      product_id: sale.product_id.toString(),
+      quantity: sale.quantity.toString(),
+      customer_name: sale.customer_name
+    })
+    setEditingId(sale.id)
+    setEditingType('sale')
+    setShowAddForm(true)
+  }
+
+  // Cancel editing
+  const cancelEdit = () => {
+    setNewSale({
+      product_id: '',
+      quantity: '',
+      customer_name: ''
+    })
+    setEditingId(null)
+    setEditingType(null)
+    setShowAddForm(false)
+  }
+
+  // Filter sales based on search term
+  const filteredSales = sales.filter(sale =>
+    sale.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    products.find(prod => prod.id === sale.product_id)?.name.toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
   // Sắp xếp giao dịch
   const sortedSales = [...filteredSales].sort((a, b) => {
