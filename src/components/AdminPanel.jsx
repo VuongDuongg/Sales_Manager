@@ -69,18 +69,32 @@ function AdminPanel() {
   }
 
   // Hàm fetch dashboard data từ API
-  const fetchDashboardData = async () => {
-    try {
-      setLoading(true)
-      const response = await authenticatedFetch(`${API_BASE_URL}/dashboard`)
-      const data = await response.json()
-      setDashboardData(data)
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error)
-    } finally {
-      setLoading(false)
+ const fetchDashboardData = async () => {
+  try {
+    setLoading(true)
+
+    const response = await authenticatedFetch(`${API_BASE_URL}/dashboard`)
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
     }
+
+    const data = await response.json()
+
+    setDashboardData(prev => ({
+      ...prev,
+      ...data,
+      topCategory: data.topCategory || {
+        category_name: 'N/A',
+        revenue: 0
+      }
+    }))
+  } catch (error) {
+    console.error('Error fetching dashboard:', error)
+  } finally {
+    setLoading(false)
   }
+}
 
   // Hàm fetch products từ API
   const fetchProducts = async () => {
@@ -117,40 +131,35 @@ function AdminPanel() {
 
   // ===== EFFECTS =====
   // useEffect để fetch data khi component mount
-  useEffect(() => {
-    fetchDashboardData()
-    fetchProducts()
+useEffect(() => {
+  if (!token) return
+
+  fetchDashboardData()
+  fetchProducts()
+  fetchSales()
+  fetchCategories()
+
+  const socketConnection = io(SOCKET_URL, {
+    auth: { token }
+  })
+
+  setSocket(socketConnection)
+
+  socketConnection.on('dashboardUpdate', (data) => {
+    setDashboardData(prev => ({ ...prev, ...data }))
+  })
+
+  socketConnection.on('productsUpdate', fetchProducts)
+  socketConnection.on('salesUpdate', () => {
     fetchSales()
-    fetchCategories()
+    fetchDashboardData()
+  })
+  socketConnection.on('categoriesUpdate', fetchCategories)
 
-    // Initialize Socket.io connection
-    const socketConnection = io(SOCKET_URL)
-    setSocket(socketConnection)
-
-    // Socket event listeners
-    socketConnection.on('dashboardUpdate', (data) => {
-      setDashboardData(prev => ({ ...prev, ...data }))
-    })
-
-    socketConnection.on('productsUpdate', () => {
-      fetchProducts()
-    })
-
-    socketConnection.on('salesUpdate', () => {
-      fetchSales()
-      fetchDashboardData()
-    })
-
-    socketConnection.on('categoriesUpdate', () => {
-      fetchCategories()
-    })
-
-    // Cleanup socket connection
-    return () => {
-      socketConnection.disconnect()
-    }
-  }, [])
-
+  return () => {
+    socketConnection.disconnect()
+  }
+}, [token])
   // ===== RENDER =====
   return (
     <div className="app">
