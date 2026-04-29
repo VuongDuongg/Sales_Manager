@@ -16,7 +16,8 @@ const Products = ({
   startEditProduct,
   editingId,
   editingType,
-  cancelEdit
+  cancelEdit,
+  categories
 }) => {
   const [sortBy, setSortBy] = useState('name')
   const [filterPrice, setFilterPrice] = useState('all')
@@ -132,6 +133,18 @@ const Products = ({
               onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
             />
           </div>
+          <div className="form-group">
+            <label>Category:</label>
+            <select
+              value={newProduct.category_id}
+              onChange={(e) => setNewProduct({...newProduct, category_id: e.target.value})}
+            >
+              <option value="">Select Category</option>
+              {categories.map(category => (
+                <option key={category.id} value={category.id}>{category.name}</option>
+              ))}
+            </select>
+          </div>
           <div className="form-actions">
             <button type="submit" className="submit-btn">
               {editingId && editingType === 'product' ? 'Update Product' : 'Add Product'}
@@ -152,6 +165,7 @@ const Products = ({
             <div key={product.id} className="product-card">
               <h3>{product.name}</h3>
               <p className="price">${product.price}</p>
+              {product.category_name && <p className="category">Category: {product.category_name}</p>}
               {product.description && <p className="description">{product.description}</p>}
               <small>Added: {new Date(product.created_at).toLocaleDateString()}</small>
               <div className="card-actions">

@@ -1,5 +1,6 @@
 // Import các hook cần thiết từ React
 import { useState, useEffect } from 'react'
+import { io } from 'socket.io-client'
 // Import CSS files - modularized styles
 import './styles/variables.css'
 import './styles/common.css'
@@ -9,9 +10,11 @@ import Dashboard from './components/Dashboard'
 import Products from './components/Products'
 import Sales from './components/Sales'
 import Charts from './components/Charts'
+import Categories from './components/Categories'
 
 // URL cơ sở của API backend (Node.js server chạy trên port 3001)
 const API_BASE_URL = 'http://localhost:3001/api'
+const SOCKET_URL = 'http://localhost:3001'
 
 // Component chính của ứng dụng Sales Manager
 function App() {
@@ -20,13 +23,28 @@ function App() {
   const [activeSection, setActiveSection] = useState('dashboard')
 
   // State lưu dữ liệu dashboard (tổng doanh thu, sản phẩm, khách hàng)
-  const [dashboardData, setDashboardData] = useState({ totalSales: 0, totalProducts: 0, totalCustomers: 0 })
+  const [dashboardData, setDashboardData] = useState({
+    totalSales: 0,
+    totalProducts: 0,
+    totalCustomers: 0,
+    totalCategories: 0,
+    averageSale: 0,
+    recentSales: 0,
+    topCategory: { category_name: 'N/A', revenue: 0 },
+    totalTransactions: 0
+  })
 
   // State lưu danh sách sản phẩm từ database
   const [products, setProducts] = useState([])
 
   // State lưu danh sách giao dịch bán hàng
   const [sales, setSales] = useState([])
+
+  // State lưu danh sách categories
+  const [categories, setCategories] = useState([])
+
+  // State cho socket connection
+  const [socket, setSocket] = useState(null)
 
   // State để hiển thị loading spinner khi đang fetch data
   const [loading, setLoading] = useState(false)
@@ -46,10 +64,13 @@ function App() {
 
   // ===== FORM STATES =====
   // State cho form thêm sản phẩm mới
-  const [newProduct, setNewProduct] = useState({ name: '', price: '', description: '' })
+  const [newProduct, setNewProduct] = useState({ name: '', price: '', description: '', category_id: '' })
 
   // State cho form thêm giao dịch bán hàng mới
   const [newSale, setNewSale] = useState({ product_id: '', quantity: '', customer_name: '' })
+
+  // State cho form thêm category mới
+  const [newCategory, setNewCategory] = useState({ name: '', description: '' })
 
   // ===== API FUNCTIONS =====
   // Hàm fetch dữ liệu dashboard từ backend
@@ -104,6 +125,19 @@ function App() {
     }
   }
 
+  // Hàm fetch danh sách categories từ backend
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/categories`)
+      if (!response.ok) throw new Error('Failed to fetch categories')
+
+      const data = await response.json()
+      setCategories(data)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
   // ===== USE EFFECT HOOKS =====
   // useEffect tự động fetch dữ liệu dashboard khi chuyển sang section dashboard
   useEffect(() => {
@@ -126,6 +160,63 @@ function App() {
     }
   }, [activeSection])
 
+  // useEffect để connect socket và listen real-time updates
+  useEffect(() => {
+    const newSocket = io(SOCKET_URL)
+    setSocket(newSocket)
+
+    // Listen for real-time updates
+    newSocket.on('productAdded', (newProduct) => {
+      setProducts(prev => [newProduct, ...prev])
+      fetchDashboardData() // Update dashboard stats
+    })
+
+    newSocket.on('productUpdated', (updatedProduct) => {
+      setProducts(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p))
+    })
+
+    newSocket.on('productDeleted', ({ id }) => {
+      setProducts(prev => prev.filter(p => p.id !== id))
+      fetchDashboardData() // Update dashboard stats
+    })
+
+    newSocket.on('saleAdded', (newSale) => {
+      setSales(prev => [newSale, ...prev])
+      fetchDashboardData() // Update dashboard stats
+    })
+
+    newSocket.on('saleUpdated', (updatedSale) => {
+      setSales(prev => prev.map(s => s.id === updatedSale.id ? updatedSale : s))
+    })
+
+    newSocket.on('saleDeleted', ({ id }) => {
+      setSales(prev => prev.filter(s => s.id !== id))
+      fetchDashboardData() // Update dashboard stats
+    })
+
+    newSocket.on('categoryAdded', (newCategory) => {
+      setCategories(prev => [...prev, newCategory])
+      fetchDashboardData() // Update dashboard stats
+    })
+
+    newSocket.on('categoryUpdated', (updatedCategory) => {
+      setCategories(prev => prev.map(c => c.id === updatedCategory.id ? updatedCategory : c))
+      fetchDashboardData() // Update dashboard stats
+    })
+
+    newSocket.on('categoryDeleted', ({ id }) => {
+      setCategories(prev => prev.filter(c => c.id !== id))
+      fetchDashboardData() // Update dashboard stats
+    })
+
+    // Fetch initial categories
+    fetchCategories()
+
+    return () => {
+      newSocket.disconnect()
+    }
+  }, []) // Empty dependency array for mount/unmount
+
   // ===== EVENT HANDLERS =====
   // Hàm xử lý cập nhật sản phẩm
   const updateProduct = async (e) => {
@@ -138,7 +229,7 @@ function App() {
       })
       if (!response.ok) throw new Error('Failed to update product')
 
-      setNewProduct({ name: '', price: '', description: '' })
+      setNewProduct({ name: '', price: '', description: '', category_id: '' })
       setEditingId(null)
       setEditingType(null)
       setShowAddForm(false)
@@ -223,7 +314,7 @@ function App() {
       if (!response.ok) throw new Error('Failed to add product')
 
       // Reset form sau khi thêm thành công
-      setNewProduct({ name: '', price: '', description: '' })
+      setNewProduct({ name: '', price: '', description: '', category_id: '' })
       setShowAddForm(false) // Ẩn form
 
       // Refresh lại dữ liệu
@@ -266,7 +357,7 @@ function App() {
   const startEditProduct = (product) => {
     setEditingId(product.id)
     setEditingType('product')
-    setNewProduct({ name: product.name, price: product.price, description: product.description })
+    setNewProduct({ name: product.name, price: product.price, description: product.description, category_id: product.category_id || '' })
     setShowAddForm(true)
   }
 
@@ -278,12 +369,77 @@ function App() {
     setShowAddForm(true)
   }
 
+  // Hàm xử lý thêm category mới
+  const addCategory = async (e) => {
+    e.preventDefault()
+    if (editingId) {
+      updateCategory(e)
+      return
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/categories`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newCategory)
+      })
+      if (!response.ok) throw new Error('Failed to add category')
+
+      setNewCategory({ name: '', description: '' })
+      setShowAddForm(false)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  // Hàm xử lý cập nhật category
+  const updateCategory = async (e) => {
+    e.preventDefault()
+    try {
+      const response = await fetch(`${API_BASE_URL}/categories/${editingId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newCategory)
+      })
+      if (!response.ok) throw new Error('Failed to update category')
+
+      setNewCategory({ name: '', description: '' })
+      setEditingId(null)
+      setEditingType(null)
+      setShowAddForm(false)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  // Hàm xử lý xóa category
+  const deleteCategory = async (id) => {
+    if (!confirm('Are you sure you want to delete this category?')) return
+    try {
+      const response = await fetch(`${API_BASE_URL}/categories/${id}`, {
+        method: 'DELETE'
+      })
+      if (!response.ok) throw new Error('Failed to delete category')
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  // Hàm để bắt đầu chỉnh sửa category
+  const startEditCategory = (category) => {
+    setEditingId(category.id)
+    setEditingType('category')
+    setNewCategory({ name: category.name, description: category.description })
+    setShowAddForm(true)
+  }
+
   // Hàm để hủy chỉnh sửa
   const cancelEdit = () => {
     setEditingId(null)
     setEditingType(null)
-    setNewProduct({ name: '', price: '', description: '' })
+    setNewProduct({ name: '', price: '', description: '', category_id: '' })
     setNewSale({ product_id: '', quantity: '', customer_name: '' })
+    setNewCategory({ name: '', description: '' })
     setShowAddForm(false)
   }
 
@@ -353,6 +509,24 @@ function App() {
             filteredProducts={filteredProducts}
             deleteProduct={deleteProduct}
             startEditProduct={startEditProduct}
+            editingId={editingId}
+            editingType={editingType}
+            cancelEdit={cancelEdit}
+            categories={categories}
+          />
+        )
+      case 'categories':
+        // Sử dụng component Categories riêng biệt
+        return (
+          <Categories
+            categories={categories}
+            showAddForm={showAddForm}
+            setShowAddForm={setShowAddForm}
+            newCategory={newCategory}
+            setNewCategory={setNewCategory}
+            addCategory={addCategory}
+            deleteCategory={deleteCategory}
+            startEditCategory={startEditCategory}
             editingId={editingId}
             editingType={editingType}
             cancelEdit={cancelEdit}
@@ -430,6 +604,15 @@ function App() {
                 onClick={() => setActiveSection('products')}
               >
                 📦 Products
+              </button>
+            </li>
+            {/* Nút chuyển đến Categories */}
+            <li>
+              <button
+                className={activeSection === 'categories' ? 'active' : ''}
+                onClick={() => setActiveSection('categories')}
+              >
+                🏷️ Categories
               </button>
             </li>
             {/* Nút chuyển đến Sales */}

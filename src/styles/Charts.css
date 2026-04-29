@@ -5,24 +5,89 @@
   animation: fadeIn 0.3s ease;
 }
 
-.charts-container h2 {
+.charts-header {
+  text-align: center;
+  margin-bottom: var(--space-xl);
+}
+
+.charts-header h2 {
   margin: 0 0 var(--space-sm) 0;
   color: var(--text-primary);
-  font-size: 1.8rem;
-  font-weight: 600;
+  font-size: 2rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .charts-subtitle {
   color: var(--text-secondary);
-  margin: 0 0 var(--space-xl) 0;
-  font-size: 1rem;
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 400;
 }
 
+/* Metrics Grid */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--space-lg);
+  margin-bottom: var(--space-xl);
+}
+
+.metric-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  box-shadow: var(--shadow-sm);
+  animation: slideUp 0.4s ease;
+  animation-fill-mode: both;
+  transition: var(--transition);
+}
+
+.metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary);
+}
+
+.metric-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.metric-content h4 {
+  margin: 0 0 var(--space-xs) 0;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.metric-value {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.metric-primary .metric-value { color: var(--primary); }
+.metric-success .metric-value { color: var(--success); }
+.metric-warning .metric-value { color: var(--warning); }
+.metric-danger .metric-value { color: var(--danger); }
+
+/* Charts Grid */
 .charts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
   gap: var(--space-xl);
-  margin-top: var(--space-xl);
+  margin-bottom: var(--space-xl);
 }
 
 .chart-card {
@@ -32,48 +97,119 @@
   padding: var(--space-lg);
   box-shadow: var(--shadow-sm);
   animation: slideUp 0.4s ease;
-  min-height: 300px;
+  min-height: 350px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  transition: var(--transition);
 }
 
 .chart-card:hover {
   box-shadow: var(--shadow-md);
   border-color: var(--primary);
   transform: translateY(-4px);
-  transition: var(--transition);
 }
 
-.chart-card-full {
-  grid-column: 1 / -1;
+.chart-large {
+  grid-column: span 2;
 }
 
-.pie-wrapper {
-  max-width: 400px;
-  margin: 0 auto;
-  width: 100%;
+.chart-medium {
+  grid-column: span 1;
 }
 
 /* Chart.js customization */
 .chart-card canvas {
   animation: fadeIn 0.5s ease;
+  max-height: 300px;
 }
 
-/* Responsive */
-@media (max-width: 1024px) {
+/* Insights Section */
+.insights-section {
+  margin-top: var(--space-xl);
+  padding: var(--space-xl);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+}
+
+.insights-section h3 {
+  margin: 0 0 var(--space-lg) 0;
+  color: var(--text-primary);
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.insights-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--space-lg);
+}
+
+.insight-card {
+  background: var(--bg-primary);
+  padding: var(--space-lg);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+}
+
+.insight-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary);
+}
+
+.insight-card h4 {
+  margin: 0 0 var(--space-sm) 0;
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.insight-card p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
   .charts-grid {
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
   }
 
-  .chart-card {
-    min-height: 250px;
+  .chart-large {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 1024px) {
+  .charts-grid {
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+
+  .insights-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   }
 }
 
 @media (max-width: 768px) {
   .charts-container {
     padding: var(--space-lg);
+  }
+
+  .charts-header h2 {
+    font-size: 1.6rem;
+  }
+
+  .charts-subtitle {
+    font-size: 1rem;
   }
 
   .charts-grid {
@@ -85,15 +221,76 @@
     min-height: 300px;
   }
 
-  .chart-card-full {
-    grid-column: 1;
+  .chart-large,
+  .chart-medium {
+    grid-column: span 1;
   }
 
-  .charts-container h2 {
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-md);
+  }
+
+  .metric-card {
+    padding: var(--space-md);
+    flex-direction: column;
+    text-align: center;
+    gap: var(--space-sm);
+  }
+
+  .metric-icon {
+    font-size: 1.5rem;
+  }
+
+  .metric-value {
+    font-size: 1.2rem;
+  }
+
+  .insights-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .insights-section {
+    padding: var(--space-lg);
+  }
+}
+
+@media (max-width: 480px) {
+  .charts-container {
+    padding: var(--space-md);
+  }
+
+  .charts-header h2 {
     font-size: 1.4rem;
   }
 
-  .pie-wrapper {
-    max-width: 100%;
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .metric-card {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .metric-content {
+    text-align: right;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
